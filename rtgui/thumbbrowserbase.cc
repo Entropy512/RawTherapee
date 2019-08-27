@@ -82,7 +82,13 @@ void ThumbBrowserBase::scroll (int direction, double deltaX, double deltaY)
         // sometimes this case happens. To avoid scrolling the wrong direction in this case, we just do nothing    
         return;
     }
-    double coef = direction == GDK_SCROLL_DOWN || (direction == GDK_SCROLL_SMOOTH && delta > 0.0) ? +1.0 : -1.0;
+    double coef = 0.0;
+    if(direction == GDK_SCROLL_SMOOTH)
+      coef = delta;
+    else if (direction == GDK_SCROLL_DOWN)
+      coef = +1.0;
+    else
+      coef = -1.0;
 
     // GUI already acquired when here
     if (direction == GDK_SCROLL_UP || direction == GDK_SCROLL_DOWN || direction == GDK_SCROLL_SMOOTH) {
