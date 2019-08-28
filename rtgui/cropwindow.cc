@@ -51,7 +51,7 @@ CropWindow::CropWindow (ImageArea* parent, bool isLowUpdatePriority_, bool isDet
       backColor(options.bgcolor), decorated(true), isFlawnOver(false), titleHeight(30), sideBorderWidth(3), lowerBorderWidth(3),
       upperBorderWidth(1), sepWidth(2), xpos(30), ypos(30), width(0), height(0), imgAreaX(0), imgAreaY(0), imgAreaW(0), imgAreaH(0),
       imgX(-1), imgY(-1), imgW(1), imgH(1), iarea(parent), cropZoom(0), zoomVersion(0), exposeVersion(0), cropgl(nullptr),
-      pmlistener(nullptr), pmhlistener(nullptr), observedCropWin(nullptr),
+      pmlistener(nullptr), pmhlistener(nullptr), scrollAccum(0.0), observedCropWin(nullptr),
       crop_custom_ratio(0.f)
 {
     initZoomSteps();
@@ -299,7 +299,13 @@ void CropWindow::scroll (int state, GdkScrollDirection direction, int x, int y, 
         // sometimes this case happens. To avoid zooming into the wrong direction in this case, we just do nothing
         return;
     }
-    bool isUp = direction == GDK_SCROLL_UP || (direction == GDK_SCROLL_SMOOTH && delta < 0.0);
+    if(direction == GDK_SCROLL_SMOOTH) {
+      scrollAccum += delta;
+      if(abs(scrollAccum) < 1.0)
+	return;
+    }
+    bool isUp = direction == GDK_SCROLL_UP || (direction == GDK_SCROLL_SMOOTH && scrollAccum < 0.0);
+    scrollAccum = 0.0;
     if ((state & GDK_CONTROL_MASK) && onArea(ColorPicker, x, y)) {
         // resizing a color picker
         if (isUp) {
