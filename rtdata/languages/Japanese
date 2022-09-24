@@ -4188,3 +4188,5 @@ ZOOMPANEL_ZOOMOUT;ズームアウト\nショートカット: <b>-</b>
 !TC_PRIM_GREY;Gy
 !TC_PRIM_REDX;Rx
 !TC_PRIM_REDY;Ry
+!TP_LOCALLAB_LOGAUTOGRAYJZ_TOOLTIP;Automatically calculates the 'Mean luminance' for the scene conditions.
+!//TP_LOCALLAB_SHOWMASKTYP_TOOLTIP;Mask and modifications can be chosen.\nBlur and noise : in this case it is not used for 'denoise'.\nDenoise : in this case it is not used for 'blur and noise'.\n\nBlur and noise + denoise : mask is shared, be careful to 'show modifications' and 'scope'
