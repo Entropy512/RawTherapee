@@ -82,6 +82,7 @@ public:
 
 private:
     void editToggled();
+    void maskSpotToggled();
     void refSpotToggled();
 
     void readOutputSliders(RGB &refOutput);
@@ -90,6 +91,7 @@ private:
     // ColorTemp value corresponding to neutral RGB multipliers (1,1,1). Should be around 6500K.
     const rtengine::ColorTemp NEUTRAL_TEMP;
 
+    const rtengine::ProcEvent evFilmNegativeScale;
     const rtengine::ProcEvent evFilmNegativeExponents;
     const rtengine::ProcEvent evFilmNegativeEnabled;
     const rtengine::ProcEvent evFilmNegativeRefSpot;
@@ -115,6 +117,12 @@ private:
     FilmNegProvider* fnp;
 
     MyComboBoxText* const colorSpace;
+
+    Adjuster* const redScale;
+    Adjuster* const greenScale;
+    Adjuster* const blueScale;
+
+    SpotPicker maskPicker;
 
     Adjuster* const greenExp;
     Adjuster* const redRatio;

@@ -256,6 +256,9 @@ bool doProcess(Imagefloat *input, Imagefloat *output,
 
 #ifdef __SSE2__
     const vfloat clipv = F2V(MAXVALF);
+    const vfloat rscalev = F2V(params.maskScale.r);
+    const vfloat gscalev = F2V(params.maskScale.g);
+    const vfloat bscalev = F2V(params.maskScale.b);
     const vfloat rexpv = F2V(rexp);
     const vfloat gexpv = F2V(gexp);
     const vfloat bexpv = F2V(bexp);
@@ -278,17 +281,17 @@ bool doProcess(Imagefloat *input, Imagefloat *output,
 #ifdef __SSE2__
 
         for (; j < rwidth - 3; j += 4) {
-            STVFU(rlineout[j], vminf(rmultv * pow_F(LVFU(rlinein[j]), rexpv), clipv));
-            STVFU(glineout[j], vminf(gmultv * pow_F(LVFU(glinein[j]), gexpv), clipv));
-            STVFU(blineout[j], vminf(bmultv * pow_F(LVFU(blinein[j]), bexpv), clipv));
+            STVFU(rlineout[j], vminf(rmultv * pow_F(LVFU(rlinein[j])*rscalev, rexpv), clipv));
+            STVFU(glineout[j], vminf(gmultv * pow_F(LVFU(glinein[j])*gscalev, gexpv), clipv));
+            STVFU(blineout[j], vminf(bmultv * pow_F(LVFU(blinein[j])*bscalev, bexpv), clipv));
         }
 
 #endif
 
         for (; j < rwidth; ++j) {
-            rlineout[j] = CLIP(rmult * pow_F(rlinein[j], rexp));
-            glineout[j] = CLIP(gmult * pow_F(glinein[j], gexp));
-            blineout[j] = CLIP(bmult * pow_F(blinein[j], bexp));
+            rlineout[j] = CLIP(rmult * pow_F(rlinein[j]*params.maskScale.r, rexp));
+            glineout[j] = CLIP(gmult * pow_F(glinein[j]*params.maskScale.g, gexp));
+            blineout[j] = CLIP(bmult * pow_F(blinein[j]*params.maskScale.b, bexp));
         }
     }
 

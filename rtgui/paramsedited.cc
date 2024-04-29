@@ -728,6 +728,7 @@ void ParamsEdited::set(bool v)
     metadata.mode = v;
     metadata.exifKeys = v;
     filmNegative.enabled = v;
+    filmNegative.maskScale = v;
     filmNegative.redRatio = v;
     filmNegative.greenExp = v;
     filmNegative.blueRatio = v;
@@ -2214,6 +2215,8 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         dehaze.saturation = dehaze.saturation && p.dehaze.saturation == other.dehaze.saturation;
         metadata.mode = metadata.mode && p.metadata.mode == other.metadata.mode;
         metadata.exifKeys = metadata.exifKeys && p.metadata.exifKeys == other.metadata.exifKeys;
+        filmNegative.enabled = filmNegative.enabled && p.filmNegative.enabled == other.filmNegative.enabled;
+        filmNegative.maskScale = filmNegative.maskScale && p.filmNegative.maskScale == other.filmNegative.maskScale;
         filmNegative.enabled = filmNegative.enabled && p.filmNegative.enabled == other.filmNegative.enabled;
         filmNegative.redRatio = filmNegative.redRatio && p.filmNegative.redRatio == other.filmNegative.redRatio;
         filmNegative.greenExp = filmNegative.greenExp && p.filmNegative.greenExp == other.filmNegative.greenExp;
@@ -7763,6 +7766,11 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.filmNegative.enabled = mods.filmNegative.enabled;
     }
 
+   if (filmNegative.maskScale) {
+        toEdit.filmNegative.maskScale = mods.filmNegative.maskScale;
+    }
+
+
     if (filmNegative.redRatio) {
         toEdit.filmNegative.redRatio = mods.filmNegative.redRatio;
     }
@@ -7840,7 +7848,7 @@ bool RetinexParamsEdited::isUnchanged() const
 
 bool FilmNegativeParamsEdited::isUnchanged() const
 {
-    return enabled && redRatio && greenExp && blueRatio && refInput && refOutput && colorSpace;
+    return enabled && maskScale && redRatio && greenExp && blueRatio && refInput && refOutput && colorSpace;
 }
 
 LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :

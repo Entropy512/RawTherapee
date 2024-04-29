@@ -196,6 +196,7 @@ FilmNegative::FilmNegative() :
     FoldableToolPanel(this, TOOL_NAME, M("TP_FILMNEGATIVE_LABEL"), false, true),
     EditSubscriber(ET_OBJECTS),
     NEUTRAL_TEMP(rtengine::ColorTemp(1., 1., 1., 1., rtengine::ColorTemp::DEFAULT_OBSERVER)),
+    evFilmNegativeScale(ProcEventMapper::getInstance()->newEvent(ALLNORAW, "HISTORY_MSG_FILMNEGATIVE_SCALE")),
     evFilmNegativeExponents(ProcEventMapper::getInstance()->newEvent(ALLNORAW, "HISTORY_MSG_FILMNEGATIVE_VALUES")),
     evFilmNegativeEnabled(ProcEventMapper::getInstance()->newEvent(ALLNORAW, "HISTORY_MSG_FILMNEGATIVE_ENABLED")),
     evFilmNegativeRefSpot(ProcEventMapper::getInstance()->newEvent(ALLNORAW, "HISTORY_MSG_FILMNEGATIVE_REF_SPOT")),
@@ -206,6 +207,10 @@ FilmNegative::FilmNegative() :
     refLuminance({{0.f, 0.f, 0.f}, 0.f}),
     fnp(nullptr),
     colorSpace(Gtk::manage(new MyComboBoxText())),
+    redScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_RSCALE"))),
+    greenScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_GSCALE"))),
+    blueScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_BSCALE"))),
+    maskPicker(DEFAULT_SPOT_WIDTH, M("TP_FILMNEGATIVE_MASK_PICK"), M("TP_FILMNEGATIVE_MASK_TOOLTIP"), M("TP_FILMNEGATIVE_MASK_SIZE")),
     greenExp(createExponentAdjuster(this, M("TP_FILMNEGATIVE_GREEN"), 0.3, 4, 0.01, 1.5)),  // master exponent (green channel)
     redRatio(createExponentAdjuster(this, M("TP_FILMNEGATIVE_RED"), 0.3, 5, 0.01, (2.04 / 1.5))), // ratio of red exponent to master exponent
     blueRatio(createExponentAdjuster(this, M("TP_FILMNEGATIVE_BLUE"), 0.3, 5, 0.01, (1.29 / 1.5))), // ratio of blue exponent to master exponent
@@ -238,14 +243,23 @@ FilmNegative::FilmNegative() :
     colorSpace->signal_changed().connect(sigc::mem_fun(*this, &FilmNegative::colorSpaceChanged));
     colorSpace->show();
 
+    pack_start(*greenScale, Gtk::PACK_SHRINK, 0);
+    pack_start(*redScale, Gtk::PACK_SHRINK, 0);
+    pack_start(*blueScale, Gtk::PACK_SHRINK, 0);
+    pack_start(maskPicker, Gtk::PACK_SHRINK, 0);
+
+    Gtk::Separator* const sep = Gtk::manage(new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
+    sep->get_style_context()->add_class("grid-row-separator");
+    pack_start(*sep, Gtk::PACK_SHRINK, 0);
+
     pack_start(*greenExp, Gtk::PACK_SHRINK, 0);
     pack_start(*redRatio, Gtk::PACK_SHRINK, 0);
     pack_start(*blueRatio, Gtk::PACK_SHRINK, 0);
     pack_start(picker, Gtk::PACK_SHRINK, 0);
 
-    Gtk::Separator* const sep = Gtk::manage(new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
-    sep->get_style_context()->add_class("grid-row-separator");
-    pack_start(*sep, Gtk::PACK_SHRINK, 0);
+    Gtk::Separator* const sep2 = Gtk::manage(new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
+    sep2->get_style_context()->add_class("grid-row-separator");
+    pack_start(*sep2, Gtk::PACK_SHRINK, 0);
 
 //    Gtk::Grid* const fbGrid = Gtk::manage(new Gtk::Grid());
 //    fbGrid->attach(*refInputLabel, 0, 0, 1, 1);
@@ -259,6 +273,7 @@ FilmNegative::FilmNegative() :
 
     pack_start(refPicker, Gtk::PACK_SHRINK, 0);
 
+    maskPicker.add_button_toggled_event(*this, &FilmNegative::maskSpotToggled);
     picker.add_button_toggled_event(*this, &FilmNegative::editToggled);
     refPicker.add_button_toggled_event(*this, &FilmNegative::refSpotToggled);
 
@@ -315,6 +330,9 @@ void FilmNegative::read(const rtengine::procparams::ProcParams* pp, const Params
     disableListener();
 
     if (pedited) {
+        redScale->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+        blueScale->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+        greenScale->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
         redRatio->setEditedState(pedited->filmNegative.redRatio ? Edited : UnEdited);
         greenExp->setEditedState(pedited->filmNegative.greenExp ? Edited : UnEdited);
         blueRatio->setEditedState(pedited->filmNegative.blueRatio ? Edited : UnEdited);
@@ -330,6 +348,11 @@ void FilmNegative::read(const rtengine::procparams::ProcParams* pp, const Params
     refLuminance.lum = 0.f;
 
     colorSpace->set_active(CLAMP((int)pp->filmNegative.colorSpace, 0, 1));
+
+    redScale->setValue(pp->filmNegative.maskScale.r);
+    greenScale->setValue(pp->filmNegative.maskScale.g);
+    blueScale->setValue(pp->filmNegative.maskScale.b);
+
     redRatio->setValue(pp->filmNegative.redRatio);
     greenExp->setValue(pp->filmNegative.greenExp);
     blueRatio->setValue(pp->filmNegative.blueRatio);
@@ -369,6 +392,10 @@ void FilmNegative::write(rtengine::procparams::ProcParams* pp, ParamsEdited* ped
         pp->filmNegative.colorSpace = rtengine::procparams::FilmNegativeParams::ColorSpace(colorSpace->get_active_row_number());
     }
 
+    pp->filmNegative.maskScale.r = redScale->getValue();
+    pp->filmNegative.maskScale.g = greenScale->getValue();
+    pp->filmNegative.maskScale.b = blueScale->getValue();
+
     pp->filmNegative.redRatio = redRatio->getValue();
     pp->filmNegative.greenExp = greenExp->getValue();
     pp->filmNegative.blueRatio = blueRatio->getValue();
@@ -377,6 +404,7 @@ void FilmNegative::write(rtengine::procparams::ProcParams* pp, ParamsEdited* ped
 
     if (pedited) {
         pedited->filmNegative.colorSpace = colorSpace->get_active_row_number() != 3; // UNCHANGED entry, see setBatchMode
+        pedited->filmNegative.maskScale = redScale->getEditedState() || greenScale->getEditedState() || blueScale->getEditedState();;
         pedited->filmNegative.redRatio = redRatio->getEditedState();
         pedited->filmNegative.greenExp = greenExp->getEditedState();
         pedited->filmNegative.blueRatio = blueRatio->getEditedState();
@@ -398,6 +426,10 @@ void FilmNegative::write(rtengine::procparams::ProcParams* pp, ParamsEdited* ped
 
 void FilmNegative::setDefaults(const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited)
 {
+    redScale->setValue(defParams->filmNegative.maskScale.r);
+    greenScale->setValue(defParams->filmNegative.maskScale.g);
+    blueScale->setValue(defParams->filmNegative.maskScale.b);
+
     redRatio->setValue(defParams->filmNegative.redRatio);
     greenExp->setValue(defParams->filmNegative.greenExp);
     blueRatio->setValue(defParams->filmNegative.blueRatio);
@@ -406,6 +438,10 @@ void FilmNegative::setDefaults(const rtengine::procparams::ProcParams* defParams
     writeOutputSliders({gray, gray, gray});
 
     if (pedited) {
+        redScale->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+        greenScale->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+        blueScale->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+
         redRatio->setDefaultEditedState(pedited->filmNegative.redRatio ? Edited : UnEdited);
         greenExp->setDefaultEditedState(pedited->filmNegative.greenExp ? Edited : UnEdited);
         blueRatio->setDefaultEditedState(pedited->filmNegative.blueRatio ? Edited : UnEdited);
@@ -432,6 +468,9 @@ void FilmNegative::setBatchMode(bool batchMode)
         refPicker.remove_if_there(this, false);
         colorSpace->append(M("GENERAL_UNCHANGED"));
         colorSpace->set_active_text(M("GENERAL_UNCHANGED"));
+        redScale->showEditedCB();
+        greenScale->showEditedCB();
+        blueScale->showEditedCB();
         redRatio->showEditedCB();
         greenExp->showEditedCB();
         blueRatio->showEditedCB();
@@ -445,7 +484,17 @@ void FilmNegative::setBatchMode(bool batchMode)
 void FilmNegative::adjusterChanged(Adjuster* a, double newval)
 {
     if (listener && getEnabled()) {
-        if (a == redRatio || a == greenExp || a == blueRatio) {
+        if (a == redScale || a == greenScale || a == blueScale) {
+            listener->panelChanged(
+                evFilmNegativeScale,
+                Glib::ustring::compose(
+                    "Ref=%1\nR=%2\nB=%3",
+                    greenScale->getValue(),
+                    redScale->getValue(),
+                    blueScale->getValue()
+                )
+            );
+        } else if (a == redRatio || a == greenExp || a == blueRatio) {
             listener->panelChanged(
                 evFilmNegativeExponents,
                 Glib::ustring::compose(
@@ -564,6 +613,13 @@ bool FilmNegative::button1Pressed(int modifierKey)
                         fnp->getFilmNegativeSpot(refSpotCoords[1], picker.get_spot_full_width(), ref2, dummy)) {
 
                     disableListener();
+                    ref1.r *= redScale->getValue();
+                    ref1.g *= greenScale->getValue();
+                    ref1.b *= blueScale->getValue();
+
+                    ref2.r *= redScale->getValue();
+                    ref2.g *= greenScale->getValue();
+                    ref2.b *= blueScale->getValue();
 
                     RGB newExps = getFilmNegativeExponents(ref1, ref2);
 
@@ -609,6 +665,10 @@ bool FilmNegative::button1Pressed(int modifierKey)
             RGB refOut;
             fnp->getFilmNegativeSpot(provider->posImage, refPicker.get_spot_full_width(), refInputValues, refOut);
 
+            refInputValues.r *= redScale->getValue();
+            refInputValues.g *= greenScale->getValue();
+            refInputValues.b *= blueScale->getValue();
+
             // Output luminance of the sampled spot
             float spotLum = rtengine::Color::rgbLuminance(refOut.r, refOut.g, refOut.b);
 
@@ -648,7 +708,31 @@ bool FilmNegative::button1Pressed(int modifierKey)
                 )
             );
 
+        } else if (maskPicker.get_active()) {
+
+            disableListener();
+
+            printf("maskPicker clicked\n");
+            RGB orangeMask, dummy;
+            fnp->getFilmNegativeSpot(provider->posImage, maskPicker.get_spot_full_width(), orangeMask, dummy);
+
+            printf("orangeMask is: %f %f %f", orangeMask.r, orangeMask.g, orangeMask.b);
+            redScale->setValue(65535.0/orangeMask.r);
+            blueScale->setValue(65535.0/orangeMask.g);
+            greenScale->setValue(65535.0/orangeMask.b);
+
+            enableListener();
+
+           listener->panelChanged(
+                evFilmNegativeScale,
+                Glib::ustring::compose(
+                    "%1, %2, %3",
+                    round(redScale->getValue()), round(greenScale->getValue()), round(blueScale->getValue())
+                )
+            );
+
         }
+
     }
 
     return true;
@@ -671,6 +755,7 @@ void FilmNegative::switchOffEditMode()
 {
     refSpotCoords.clear();
     unsubscribe();
+    maskPicker.set_active(false);
     picker.set_active(false);
     refPicker.set_active(false);
 }
@@ -680,6 +765,7 @@ void FilmNegative::editToggled()
     if (picker.get_active()) {
 
         refPicker.set_active(false);
+        maskPicker.set_active(false);
         refSpotCoords.clear();
         activePicker = &picker;
 
@@ -704,8 +790,34 @@ void FilmNegative::refSpotToggled()
     if (refPicker.get_active()) {
 
         picker.set_active(false);
+        maskPicker.set_active(false);
         refSpotCoords.clear();
         activePicker = &refPicker;
+
+        subscribe();
+
+        int w, h;
+        getEditProvider()->getImageSize(w, h);
+
+        // Stick a dummy rectangle over the whole image in mouseOverGeometry.
+        // This is to make sure the getCursor() call is fired everywhere.
+        EditRectangle* const imgRect = static_cast<EditRectangle*>(mouseOverGeometry.at(0));
+        imgRect->setXYWH(0, 0, w, h);
+
+    } else {
+        refSpotCoords.clear();
+        unsubscribe();
+    }
+}
+
+void FilmNegative::maskSpotToggled()
+{
+    if (maskPicker.get_active()) {
+
+        picker.set_active(false);
+        refPicker.set_active(false);
+        refSpotCoords.clear();
+        activePicker = &maskPicker;
 
         subscribe();
 

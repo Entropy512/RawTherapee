@@ -2642,9 +2642,6 @@ struct RAWParams {
   */
 struct FilmNegativeParams {
     bool enabled;
-    double redRatio;
-    double greenExp;
-    double blueRatio;
 
     struct RGB {
         float r, g, b;
@@ -2654,8 +2651,15 @@ struct FilmNegativeParams {
         RGB operator *(const RGB& other) const;
     };
 
+    RGB maskScale;
+
+    double redRatio;
+    double greenExp;
+    double blueRatio;
+
     RGB refInput;
     RGB refOutput;
+
 
     enum class ColorSpace {
         INPUT = 0,
