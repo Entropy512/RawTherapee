@@ -252,20 +252,19 @@ bool doProcess(Imagefloat *input, Imagefloat *output,
     float rmult = refOut.r / pow_F(rtengine::max(refIn.r, 1.f), rexp);
     float gmult = refOut.g / pow_F(rtengine::max(refIn.g, 1.f), gexp);
     float bmult = refOut.b / pow_F(rtengine::max(refIn.b, 1.f), bexp);
-    printf("rmult is %f", rmult);
 
     /* 
      * Enhanced model from https://github.com/Entropy512/rgb_led_filmscan/blob/main/density_plot.py
      * Currently hardcoding evdelt to 4 (does not match Superia but does not throw the model fit off by too much)
      * Also hardcoding curvestr to 2.0 which is a reasonabl compromise between all Fuji and Kodak values
      */ 
-    const float evdelt = 4.0;
+    const float evdelt = params.toeDelta;
     const float evmult = pow_F(2.0, -evdelt);
-    const float curvestr = 2.0;
+    const float curvestr = params.toeStrength;
+
     const float radj = pow_F(pow_F(MAXVALF, rexp), curvestr) - pow_F(pow_F(MAXVALF, rexp)*evmult, curvestr);
     const float gadj = pow_F(pow_F(MAXVALF, gexp), curvestr) - pow_F(pow_F(MAXVALF, gexp)*evmult, curvestr);
     const float badj = pow_F(pow_F(MAXVALF, bexp), curvestr) - pow_F(pow_F(MAXVALF, bexp)*evmult, curvestr);
-    printf("gadj is %10e\n", gadj);
 
 #ifdef __SSE2__
     const vfloat clipv = F2V(MAXVALF);
@@ -298,25 +297,25 @@ bool doProcess(Imagefloat *input, Imagefloat *output,
 #ifdef __SSE2__
 
         for (; j < rwidth - 3; j += 4) {
-            const vfloat rv = pow_F(LVFU(rlinein[j])*rscalev, rexpv);
-            const vfloat gv = pow_F(LVFU(glinein[j])*gscalev, gexpv);
-            const vfloat bv = pow_F(LVFU(blinein[j])*bscalev, bexpv);
+            const vfloat rv = pow_F(vminf(LVFU(rlinein[j])*rscalev, clipv), rexpv);
+            const vfloat gv = pow_F(vminf(LVFU(glinein[j])*gscalev, clipv), gexpv);
+            const vfloat bv = pow_F(vminf(LVFU(blinein[j])*bscalev, clipv), bexpv);
             STVFU(rlineout[j], vminf(rmultv * pow_F(pow_F(rv, curvestrv) - radjv, 1.0/curvestrv), clipv));
             STVFU(glineout[j], vminf(gmultv * pow_F(pow_F(gv, curvestrv) - gadjv, 1.0/curvestrv), clipv));
             STVFU(blineout[j], vminf(bmultv * pow_F(pow_F(bv, curvestrv) - badjv, 1.0/curvestrv), clipv));
         }
 
-#endif
+#else
 
         for (; j < rwidth; ++j) {
-            const float r = pow_F(rlinein[j]*params.maskScale.r, rexp);
-            const float g = pow_F(glinein[j]*params.maskScale.g, gexp);
-            const float b = pow_F(blinein[j]*params.maskScale.b, bexp);
+            const float r = pow_F(CLIP(rlinein[j]*params.maskScale.r), rexp);
+            const float g = pow_F(CLIP(glinein[j]*params.maskScale.g), gexp);
+            const float b = pow_F(CLIP(blinein[j]*params.maskScale.b), bexp);
             rlineout[j] = CLIP(rmult * pow_F(pow_F(r, curvestr) - radj, 1.0/curvestr));
             glineout[j] = CLIP(gmult * pow_F(pow_F(g, curvestr) - gadj, 1.0/curvestr));
             blineout[j] = CLIP(bmult * pow_F(pow_F(b, curvestr) - badj, 1.0/curvestr));
         }
-
+#endif
     }
 
     return refsUpdated;

@@ -2653,6 +2653,9 @@ struct FilmNegativeParams {
 
     RGB maskScale;
 
+    double toeDelta;
+    double toeStrength;
+
     double redRatio;
     double greenExp;
     double blueRatio;

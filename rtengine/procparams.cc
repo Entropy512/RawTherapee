@@ -5976,6 +5976,8 @@ Glib::ustring RAWParams::getFlatFieldBlurTypeString(FlatFieldBlurType type)
 FilmNegativeParams::FilmNegativeParams() :
     enabled(false),
     maskScale({1.0, 1.0, 1.0}),
+    toeDelta(0.0),
+    toeStrength(2.0),
     redRatio(1.36),
     greenExp(1.5),
     blueRatio(0.86),
@@ -6013,6 +6015,8 @@ bool FilmNegativeParams::operator ==(const FilmNegativeParams& other) const
     return
         enabled == other.enabled
         && maskScale == other.maskScale
+        && toeDelta == other.toeDelta
+        && toeStrength == other.toeStrength
         && redRatio == other.redRatio
         && greenExp == other.greenExp
         && blueRatio == other.blueRatio
@@ -8006,6 +8010,8 @@ int ProcParams::save(const Glib::ustring& fname, const Glib::ustring& fname2, bo
 // Film negative
         saveToKeyfile(!pedited || pedited->filmNegative.enabled, "Film Negative", "Enabled", filmNegative.enabled, keyFile);
         saveToKeyfile(!pedited || pedited->filmNegative.maskScale, "Film Negative", "MaskScale", filmNegative.maskScale, keyFile);
+        saveToKeyfile(!pedited || pedited->filmNegative.toeDelta, "Film Negative", "ToeDelta", filmNegative.toeDelta, keyFile);
+        saveToKeyfile(!pedited || pedited->filmNegative.toeStrength, "Film Negative", "ToeStrength", filmNegative.toeStrength, keyFile);
         saveToKeyfile(!pedited || pedited->filmNegative.redRatio, "Film Negative", "RedRatio", filmNegative.redRatio, keyFile);
         saveToKeyfile(!pedited || pedited->filmNegative.greenExp, "Film Negative", "GreenExponent", filmNegative.greenExp, keyFile);
         saveToKeyfile(!pedited || pedited->filmNegative.blueRatio, "Film Negative", "BlueRatio", filmNegative.blueRatio, keyFile);
@@ -10962,7 +10968,9 @@ int ProcParams::load(const Glib::ustring& fname, ParamsEdited* pedited)
 
         if (keyFile.has_group("Film Negative")) {
             assignFromKeyfile(keyFile, "Film Negative", "Enabled", filmNegative.enabled, pedited->filmNegative.enabled);
-            assignFromKeyfile(keyFile, "Film Negative", "MaskScale", filmNegative.maskScale, pedited->filmNegative.maskScale);            
+            assignFromKeyfile(keyFile, "Film Negative", "MaskScale", filmNegative.maskScale, pedited->filmNegative.maskScale);
+            assignFromKeyfile(keyFile, "Film Negative", "ToeDelta", filmNegative.toeDelta, pedited->filmNegative.toeDelta);
+            assignFromKeyfile(keyFile, "Film Negative", "ToeStrength", filmNegative.toeStrength, pedited->filmNegative.toeDelta);
             assignFromKeyfile(keyFile, "Film Negative", "RedRatio", filmNegative.redRatio, pedited->filmNegative.redRatio);
             assignFromKeyfile(keyFile, "Film Negative", "GreenExponent", filmNegative.greenExp, pedited->filmNegative.greenExp);
             assignFromKeyfile(keyFile, "Film Negative", "BlueRatio", filmNegative.blueRatio, pedited->filmNegative.blueRatio);

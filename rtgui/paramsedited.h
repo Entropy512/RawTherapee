@@ -1601,6 +1601,8 @@ struct MetaDataParamsEdited {
 struct FilmNegativeParamsEdited {
     bool enabled;
     bool maskScale;
+    bool toeDelta;
+    bool toeStrength;
     bool redRatio;
     bool greenExp;
     bool blueRatio;

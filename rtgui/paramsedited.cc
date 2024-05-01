@@ -729,6 +729,8 @@ void ParamsEdited::set(bool v)
     metadata.exifKeys = v;
     filmNegative.enabled = v;
     filmNegative.maskScale = v;
+    filmNegative.toeDelta = v;
+    filmNegative.toeStrength = v;
     filmNegative.redRatio = v;
     filmNegative.greenExp = v;
     filmNegative.blueRatio = v;
@@ -2217,7 +2219,8 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         metadata.exifKeys = metadata.exifKeys && p.metadata.exifKeys == other.metadata.exifKeys;
         filmNegative.enabled = filmNegative.enabled && p.filmNegative.enabled == other.filmNegative.enabled;
         filmNegative.maskScale = filmNegative.maskScale && p.filmNegative.maskScale == other.filmNegative.maskScale;
-        filmNegative.enabled = filmNegative.enabled && p.filmNegative.enabled == other.filmNegative.enabled;
+        filmNegative.toeDelta = filmNegative.toeDelta && p.filmNegative.toeDelta == other.filmNegative.toeDelta;
+        filmNegative.toeStrength = filmNegative.toeStrength && p.filmNegative.toeStrength == other.filmNegative.toeStrength;
         filmNegative.redRatio = filmNegative.redRatio && p.filmNegative.redRatio == other.filmNegative.redRatio;
         filmNegative.greenExp = filmNegative.greenExp && p.filmNegative.greenExp == other.filmNegative.greenExp;
         filmNegative.blueRatio = filmNegative.blueRatio && p.filmNegative.blueRatio == other.filmNegative.blueRatio;
@@ -7766,10 +7769,17 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
         toEdit.filmNegative.enabled = mods.filmNegative.enabled;
     }
 
-   if (filmNegative.maskScale) {
+    if (filmNegative.maskScale) {
         toEdit.filmNegative.maskScale = mods.filmNegative.maskScale;
     }
 
+    if (filmNegative.toeDelta) {
+        toEdit.filmNegative.toeDelta = mods.filmNegative.toeDelta;
+    }
+
+    if (filmNegative.toeStrength) {
+        toEdit.filmNegative.toeStrength = mods.filmNegative.toeStrength;
+    }
 
     if (filmNegative.redRatio) {
         toEdit.filmNegative.redRatio = mods.filmNegative.redRatio;
@@ -7848,7 +7858,7 @@ bool RetinexParamsEdited::isUnchanged() const
 
 bool FilmNegativeParamsEdited::isUnchanged() const
 {
-    return enabled && maskScale && redRatio && greenExp && blueRatio && refInput && refOutput && colorSpace;
+    return enabled && maskScale && toeDelta && toeStrength && redRatio && greenExp && blueRatio && refInput && refOutput && colorSpace;
 }
 
 LocallabParamsEdited::LocallabSpotEdited::LocallabSpotEdited(bool v) :

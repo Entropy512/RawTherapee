@@ -122,6 +122,9 @@ private:
     Adjuster* const greenScale;
     Adjuster* const blueScale;
 
+    Adjuster* const toeDelta;
+    Adjuster* const toeStrength;
+    
     SpotPicker maskPicker;
 
     Adjuster* const greenExp;

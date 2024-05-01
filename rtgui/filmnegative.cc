@@ -61,10 +61,11 @@ Adjuster* createExponentAdjuster(AdjusterListener* listener, const Glib::ustring
     return adj;
 }
 
-Adjuster* createLevelAdjuster(AdjusterListener* listener, const Glib::ustring& label)
+Adjuster* createLevelAdjuster(AdjusterListener* listener, const Glib::ustring& label, double minV, double maxV, double defaultval)
 {
 //    Adjuster* const adj = Gtk::manage(new Adjuster(label, 1.0, 65535.0, 1.0, rtengine::MAXVALF / 24.));
-    Adjuster* const adj = Gtk::manage(new Adjuster(label, 0.0, 10.0, 0.01, toAdjuster(rtengine::MAXVALF / 24.)));
+    //Adjuster* const adj = Gtk::manage(new Adjuster(label, 0.0, 10.0, 0.01, toAdjuster(rtengine::MAXVALF / 24.)));
+    Adjuster* const adj = Gtk::manage(new Adjuster(label, minV, maxV, 0.01, defaultval));
     adj->setAdjusterListener(listener);
 //    adj->setLogScale(6, 1000.0, true);
 
@@ -207,9 +208,11 @@ FilmNegative::FilmNegative() :
     refLuminance({{0.f, 0.f, 0.f}, 0.f}),
     fnp(nullptr),
     colorSpace(Gtk::manage(new MyComboBoxText())),
-    redScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_RSCALE"))),
-    greenScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_GSCALE"))),
-    blueScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_BSCALE"))),
+    redScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_RSCALE"), 0.0, 5.0, 1.0)),
+    greenScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_GSCALE"), 0.0, 5.0, 1.0)),
+    blueScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_BSCALE"), 0.0, 5.0, 1.0)),
+    toeDelta(createLevelAdjuster(this, M("TP_FILMNEGATIVE_TOEDELTA"), 0.0, 5.0, 1.0)),
+    toeStrength(createLevelAdjuster(this, M("TP_FILMNEGATIVE_TOESTR"), 0.0, 5.0, 1.0)),
     maskPicker(DEFAULT_SPOT_WIDTH, M("TP_FILMNEGATIVE_MASK_PICK"), M("TP_FILMNEGATIVE_MASK_TOOLTIP"), M("TP_FILMNEGATIVE_MASK_SIZE")),
     greenExp(createExponentAdjuster(this, M("TP_FILMNEGATIVE_GREEN"), 0.3, 4, 0.01, 1.5)),  // master exponent (green channel)
     redRatio(createExponentAdjuster(this, M("TP_FILMNEGATIVE_RED"), 0.3, 5, 0.01, (2.04 / 1.5))), // ratio of red exponent to master exponent
@@ -218,7 +221,7 @@ FilmNegative::FilmNegative() :
     refInputLabel(Gtk::manage(new Gtk::Label(Glib::ustring::compose(M("TP_FILMNEGATIVE_REF_LABEL"), "- - -")))),
     refPicker(DEFAULT_SPOT_WIDTH, M("TP_FILMNEGATIVE_REF_PICK"), M("TP_FILMNEGATIVE_REF_TOOLTIP"), M("TP_FILMNEGATIVE_REF_SIZE")),
     activePicker(&picker),
-    outputLevel(createLevelAdjuster(this, M("TP_FILMNEGATIVE_OUT_LEVEL"))),  // ref level
+    outputLevel(createLevelAdjuster(this, M("TP_FILMNEGATIVE_OUT_LEVEL"), 0.0, 10.0, toAdjuster(rtengine::MAXVALF / 24.))),  // ref level
     greenBalance(createBalanceAdjuster(this, M("TP_FILMNEGATIVE_GREENBALANCE"), -3.0, 3.0, 0.0, "circle-magenta-small", "circle-green-small")),  // green balance
     blueBalance(createBalanceAdjuster(this, M("TP_FILMNEGATIVE_BLUEBALANCE"), -3.0, 3.0, 0.0, "circle-blue-small", "circle-yellow-small"))  // blue balance
 {
@@ -247,6 +250,8 @@ FilmNegative::FilmNegative() :
     pack_start(*redScale, Gtk::PACK_SHRINK, 0);
     pack_start(*blueScale, Gtk::PACK_SHRINK, 0);
     pack_start(maskPicker, Gtk::PACK_SHRINK, 0);
+    pack_start(*toeDelta, Gtk::PACK_SHRINK, 0);
+    pack_start(*toeStrength, Gtk::PACK_SHRINK, 0);
 
     Gtk::Separator* const sep = Gtk::manage(new Gtk::Separator(Gtk::ORIENTATION_HORIZONTAL));
     sep->get_style_context()->add_class("grid-row-separator");
@@ -333,6 +338,8 @@ void FilmNegative::read(const rtengine::procparams::ProcParams* pp, const Params
         redScale->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
         blueScale->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
         greenScale->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+        toeDelta->setEditedState(pedited->filmNegative.toeDelta ? Edited : UnEdited);
+        toeDelta->setEditedState(pedited->filmNegative.toeStrength ? Edited : UnEdited);
         redRatio->setEditedState(pedited->filmNegative.redRatio ? Edited : UnEdited);
         greenExp->setEditedState(pedited->filmNegative.greenExp ? Edited : UnEdited);
         blueRatio->setEditedState(pedited->filmNegative.blueRatio ? Edited : UnEdited);
@@ -352,6 +359,9 @@ void FilmNegative::read(const rtengine::procparams::ProcParams* pp, const Params
     redScale->setValue(pp->filmNegative.maskScale.r);
     greenScale->setValue(pp->filmNegative.maskScale.g);
     blueScale->setValue(pp->filmNegative.maskScale.b);
+
+    toeDelta->setValue(pp->filmNegative.toeDelta);
+    toeStrength->setValue(pp->filmNegative.toeStrength);
 
     redRatio->setValue(pp->filmNegative.redRatio);
     greenExp->setValue(pp->filmNegative.greenExp);
@@ -396,6 +406,9 @@ void FilmNegative::write(rtengine::procparams::ProcParams* pp, ParamsEdited* ped
     pp->filmNegative.maskScale.g = greenScale->getValue();
     pp->filmNegative.maskScale.b = blueScale->getValue();
 
+    pp->filmNegative.toeDelta = toeDelta->getValue();
+    pp->filmNegative.toeStrength = toeStrength->getValue();
+
     pp->filmNegative.redRatio = redRatio->getValue();
     pp->filmNegative.greenExp = greenExp->getValue();
     pp->filmNegative.blueRatio = blueRatio->getValue();
@@ -405,6 +418,10 @@ void FilmNegative::write(rtengine::procparams::ProcParams* pp, ParamsEdited* ped
     if (pedited) {
         pedited->filmNegative.colorSpace = colorSpace->get_active_row_number() != 3; // UNCHANGED entry, see setBatchMode
         pedited->filmNegative.maskScale = redScale->getEditedState() || greenScale->getEditedState() || blueScale->getEditedState();;
+
+        pedited->filmNegative.toeDelta = toeDelta->getEditedState();
+        pedited->filmNegative.toeStrength = toeStrength->getEditedState();
+
         pedited->filmNegative.redRatio = redRatio->getEditedState();
         pedited->filmNegative.greenExp = greenExp->getEditedState();
         pedited->filmNegative.blueRatio = blueRatio->getEditedState();
@@ -430,6 +447,9 @@ void FilmNegative::setDefaults(const rtengine::procparams::ProcParams* defParams
     greenScale->setValue(defParams->filmNegative.maskScale.g);
     blueScale->setValue(defParams->filmNegative.maskScale.b);
 
+    toeDelta->setValue(defParams->filmNegative.toeDelta);
+    toeStrength->setValue(defParams->filmNegative.toeStrength);
+ 
     redRatio->setValue(defParams->filmNegative.redRatio);
     greenExp->setValue(defParams->filmNegative.greenExp);
     blueRatio->setValue(defParams->filmNegative.blueRatio);
@@ -442,6 +462,9 @@ void FilmNegative::setDefaults(const rtengine::procparams::ProcParams* defParams
         greenScale->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
         blueScale->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
 
+        toeDelta->setDefaultEditedState(pedited->filmNegative.toeDelta ? Edited : UnEdited);
+        toeStrength->setDefaultEditedState(pedited->filmNegative.toeStrength ? Edited : UnEdited);
+
         redRatio->setDefaultEditedState(pedited->filmNegative.redRatio ? Edited : UnEdited);
         greenExp->setDefaultEditedState(pedited->filmNegative.greenExp ? Edited : UnEdited);
         blueRatio->setDefaultEditedState(pedited->filmNegative.blueRatio ? Edited : UnEdited);
@@ -450,6 +473,13 @@ void FilmNegative::setDefaults(const rtengine::procparams::ProcParams* defParams
         greenBalance->setDefaultEditedState(pedited->filmNegative.refOutput ? Edited : UnEdited);
         blueBalance->setDefaultEditedState(pedited->filmNegative.refOutput ? Edited : UnEdited);
     } else {
+        redScale->setDefaultEditedState(Irrelevant);
+        greenScale->setDefaultEditedState(Irrelevant);
+        blueScale->setDefaultEditedState(Irrelevant);
+
+        toeDelta->setDefaultEditedState(Irrelevant);
+        toeStrength->setDefaultEditedState(Irrelevant);
+
         redRatio->setDefaultEditedState(Irrelevant);
         greenExp->setDefaultEditedState(Irrelevant);
         blueRatio->setDefaultEditedState(Irrelevant);
@@ -471,6 +501,8 @@ void FilmNegative::setBatchMode(bool batchMode)
         redScale->showEditedCB();
         greenScale->showEditedCB();
         blueScale->showEditedCB();
+        toeDelta->showEditedCB();
+        toeStrength->showEditedCB();
         redRatio->showEditedCB();
         greenExp->showEditedCB();
         blueRatio->showEditedCB();
@@ -484,7 +516,7 @@ void FilmNegative::setBatchMode(bool batchMode)
 void FilmNegative::adjusterChanged(Adjuster* a, double newval)
 {
     if (listener && getEnabled()) {
-        if (a == redScale || a == greenScale || a == blueScale) {
+        if (a == toeDelta || a == toeStrength || a == redScale || a == greenScale || a == blueScale) {
             listener->panelChanged(
                 evFilmNegativeScale,
                 Glib::ustring::compose(
