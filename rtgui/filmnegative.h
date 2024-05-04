@@ -118,9 +118,9 @@ private:
 
     MyComboBoxText* const colorSpace;
 
-    Adjuster* const redScale;
+    Adjuster* const redScaleRatio;
     Adjuster* const greenScale;
-    Adjuster* const blueScale;
+    Adjuster* const blueScaleRatio;
 
     Adjuster* const toeDelta;
     Adjuster* const toeStrength;

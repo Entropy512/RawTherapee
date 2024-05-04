@@ -208,9 +208,9 @@ FilmNegative::FilmNegative() :
     refLuminance({{0.f, 0.f, 0.f}, 0.f}),
     fnp(nullptr),
     colorSpace(Gtk::manage(new MyComboBoxText())),
-    redScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_RSCALE"), 0.0, 5.0, 1.0)),
+    redScaleRatio(createLevelAdjuster(this, M("TP_FILMNEGATIVE_RSCALER"), 0.0, 5.0, 1.0)),
     greenScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_GSCALE"), 0.0, 5.0, 1.0)),
-    blueScale(createLevelAdjuster(this, M("TP_FILMNEGATIVE_BSCALE"), 0.0, 5.0, 1.0)),
+    blueScaleRatio(createLevelAdjuster(this, M("TP_FILMNEGATIVE_BSCALER"), 0.0, 5.0, 1.0)),
     toeDelta(createLevelAdjuster(this, M("TP_FILMNEGATIVE_TOEDELTA"), 0.0, 5.0, 1.0)),
     toeStrength(createLevelAdjuster(this, M("TP_FILMNEGATIVE_TOESTR"), 0.0, 5.0, 1.0)),
     maskPicker(DEFAULT_SPOT_WIDTH, M("TP_FILMNEGATIVE_MASK_PICK"), M("TP_FILMNEGATIVE_MASK_TOOLTIP"), M("TP_FILMNEGATIVE_MASK_SIZE")),
@@ -247,8 +247,8 @@ FilmNegative::FilmNegative() :
     colorSpace->show();
 
     pack_start(*greenScale, Gtk::PACK_SHRINK, 0);
-    pack_start(*redScale, Gtk::PACK_SHRINK, 0);
-    pack_start(*blueScale, Gtk::PACK_SHRINK, 0);
+    pack_start(*redScaleRatio, Gtk::PACK_SHRINK, 0);
+    pack_start(*blueScaleRatio, Gtk::PACK_SHRINK, 0);
     pack_start(maskPicker, Gtk::PACK_SHRINK, 0);
     pack_start(*toeDelta, Gtk::PACK_SHRINK, 0);
     pack_start(*toeStrength, Gtk::PACK_SHRINK, 0);
@@ -335,8 +335,8 @@ void FilmNegative::read(const rtengine::procparams::ProcParams* pp, const Params
     disableListener();
 
     if (pedited) {
-        redScale->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
-        blueScale->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+        redScaleRatio->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+        blueScaleRatio->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
         greenScale->setEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
         toeDelta->setEditedState(pedited->filmNegative.toeDelta ? Edited : UnEdited);
         toeDelta->setEditedState(pedited->filmNegative.toeStrength ? Edited : UnEdited);
@@ -356,9 +356,9 @@ void FilmNegative::read(const rtengine::procparams::ProcParams* pp, const Params
 
     colorSpace->set_active(CLAMP((int)pp->filmNegative.colorSpace, 0, 1));
 
-    redScale->setValue(pp->filmNegative.maskScale.r);
+    redScaleRatio->setValue(pp->filmNegative.maskScale.r/pp->filmNegative.maskScale.g);
     greenScale->setValue(pp->filmNegative.maskScale.g);
-    blueScale->setValue(pp->filmNegative.maskScale.b);
+    blueScaleRatio->setValue(pp->filmNegative.maskScale.b/pp->filmNegative.maskScale.g);
 
     toeDelta->setValue(pp->filmNegative.toeDelta);
     toeStrength->setValue(pp->filmNegative.toeStrength);
@@ -402,9 +402,9 @@ void FilmNegative::write(rtengine::procparams::ProcParams* pp, ParamsEdited* ped
         pp->filmNegative.colorSpace = rtengine::procparams::FilmNegativeParams::ColorSpace(colorSpace->get_active_row_number());
     }
 
-    pp->filmNegative.maskScale.r = redScale->getValue();
+    pp->filmNegative.maskScale.r = redScaleRatio->getValue()*greenScale->getValue();
     pp->filmNegative.maskScale.g = greenScale->getValue();
-    pp->filmNegative.maskScale.b = blueScale->getValue();
+    pp->filmNegative.maskScale.b = blueScaleRatio->getValue()*greenScale->getValue();
 
     pp->filmNegative.toeDelta = toeDelta->getValue();
     pp->filmNegative.toeStrength = toeStrength->getValue();
@@ -417,7 +417,7 @@ void FilmNegative::write(rtengine::procparams::ProcParams* pp, ParamsEdited* ped
 
     if (pedited) {
         pedited->filmNegative.colorSpace = colorSpace->get_active_row_number() != 3; // UNCHANGED entry, see setBatchMode
-        pedited->filmNegative.maskScale = redScale->getEditedState() || greenScale->getEditedState() || blueScale->getEditedState();;
+        pedited->filmNegative.maskScale = redScaleRatio->getEditedState() || greenScale->getEditedState() || blueScaleRatio->getEditedState();;
 
         pedited->filmNegative.toeDelta = toeDelta->getEditedState();
         pedited->filmNegative.toeStrength = toeStrength->getEditedState();
@@ -443,9 +443,9 @@ void FilmNegative::write(rtengine::procparams::ProcParams* pp, ParamsEdited* ped
 
 void FilmNegative::setDefaults(const rtengine::procparams::ProcParams* defParams, const ParamsEdited* pedited)
 {
-    redScale->setValue(defParams->filmNegative.maskScale.r);
+    redScaleRatio->setValue(defParams->filmNegative.maskScale.r/defParams->filmNegative.maskScale.g);
     greenScale->setValue(defParams->filmNegative.maskScale.g);
-    blueScale->setValue(defParams->filmNegative.maskScale.b);
+    blueScaleRatio->setValue(defParams->filmNegative.maskScale.b/defParams->filmNegative.maskScale.g);
 
     toeDelta->setValue(defParams->filmNegative.toeDelta);
     toeStrength->setValue(defParams->filmNegative.toeStrength);
@@ -458,9 +458,9 @@ void FilmNegative::setDefaults(const rtengine::procparams::ProcParams* defParams
     writeOutputSliders({gray, gray, gray});
 
     if (pedited) {
-        redScale->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+        redScaleRatio->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
         greenScale->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
-        blueScale->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
+        blueScaleRatio->setDefaultEditedState(pedited->filmNegative.maskScale ? Edited : UnEdited);
 
         toeDelta->setDefaultEditedState(pedited->filmNegative.toeDelta ? Edited : UnEdited);
         toeStrength->setDefaultEditedState(pedited->filmNegative.toeStrength ? Edited : UnEdited);
@@ -473,9 +473,9 @@ void FilmNegative::setDefaults(const rtengine::procparams::ProcParams* defParams
         greenBalance->setDefaultEditedState(pedited->filmNegative.refOutput ? Edited : UnEdited);
         blueBalance->setDefaultEditedState(pedited->filmNegative.refOutput ? Edited : UnEdited);
     } else {
-        redScale->setDefaultEditedState(Irrelevant);
+        redScaleRatio->setDefaultEditedState(Irrelevant);
         greenScale->setDefaultEditedState(Irrelevant);
-        blueScale->setDefaultEditedState(Irrelevant);
+        blueScaleRatio->setDefaultEditedState(Irrelevant);
 
         toeDelta->setDefaultEditedState(Irrelevant);
         toeStrength->setDefaultEditedState(Irrelevant);
@@ -498,9 +498,9 @@ void FilmNegative::setBatchMode(bool batchMode)
         refPicker.remove_if_there(this, false);
         colorSpace->append(M("GENERAL_UNCHANGED"));
         colorSpace->set_active_text(M("GENERAL_UNCHANGED"));
-        redScale->showEditedCB();
+        redScaleRatio->showEditedCB();
         greenScale->showEditedCB();
-        blueScale->showEditedCB();
+        blueScaleRatio->showEditedCB();
         toeDelta->showEditedCB();
         toeStrength->showEditedCB();
         redRatio->showEditedCB();
@@ -516,14 +516,14 @@ void FilmNegative::setBatchMode(bool batchMode)
 void FilmNegative::adjusterChanged(Adjuster* a, double newval)
 {
     if (listener && getEnabled()) {
-        if (a == toeDelta || a == toeStrength || a == redScale || a == greenScale || a == blueScale) {
+        if (a == toeDelta || a == toeStrength || a == redScaleRatio || a == greenScale || a == blueScaleRatio) {
             listener->panelChanged(
                 evFilmNegativeScale,
                 Glib::ustring::compose(
                     "Ref=%1\nR=%2\nB=%3",
                     greenScale->getValue(),
-                    redScale->getValue(),
-                    blueScale->getValue()
+                    redScaleRatio->getValue(),
+                    blueScaleRatio->getValue()
                 )
             );
         } else if (a == redRatio || a == greenExp || a == blueRatio) {
@@ -645,13 +645,13 @@ bool FilmNegative::button1Pressed(int modifierKey)
                         fnp->getFilmNegativeSpot(refSpotCoords[1], picker.get_spot_full_width(), ref2, dummy)) {
 
                     disableListener();
-                    ref1.r *= redScale->getValue();
+                    ref1.r *= redScaleRatio->getValue()*greenScale->getValue();
                     ref1.g *= greenScale->getValue();
-                    ref1.b *= blueScale->getValue();
+                    ref1.b *= blueScaleRatio->getValue()*greenScale->getValue();
 
-                    ref2.r *= redScale->getValue();
+                    ref2.r *= redScaleRatio->getValue()*greenScale->getValue();
                     ref2.g *= greenScale->getValue();
-                    ref2.b *= blueScale->getValue();
+                    ref2.b *= blueScaleRatio->getValue()*greenScale->getValue();
 
                     RGB newExps = getFilmNegativeExponents(ref1, ref2);
 
@@ -697,9 +697,9 @@ bool FilmNegative::button1Pressed(int modifierKey)
             RGB refOut;
             fnp->getFilmNegativeSpot(provider->posImage, refPicker.get_spot_full_width(), refInputValues, refOut);
 
-            refInputValues.r *= redScale->getValue();
+            refInputValues.r *= redScaleRatio->getValue()*greenScale->getValue();
             refInputValues.g *= greenScale->getValue();
-            refInputValues.b *= blueScale->getValue();
+            refInputValues.b *= blueScaleRatio->getValue()*greenScale->getValue();
 
             // Output luminance of the sampled spot
             float spotLum = rtengine::Color::rgbLuminance(refOut.r, refOut.g, refOut.b);
@@ -749,9 +749,9 @@ bool FilmNegative::button1Pressed(int modifierKey)
             fnp->getFilmNegativeSpot(provider->posImage, maskPicker.get_spot_full_width(), orangeMask, dummy);
 
             printf("orangeMask is: %f %f %f", orangeMask.r, orangeMask.g, orangeMask.b);
-            redScale->setValue(65535.0/orangeMask.r);
-            blueScale->setValue(65535.0/orangeMask.g);
-            greenScale->setValue(65535.0/orangeMask.b);
+            redScaleRatio->setValue(orangeMask.g/orangeMask.r);
+            blueScaleRatio->setValue(orangeMask.g/orangeMask.b);
+            greenScale->setValue(rtengine::MAXVALF/orangeMask.g);
 
             enableListener();
 
@@ -759,7 +759,7 @@ bool FilmNegative::button1Pressed(int modifierKey)
                 evFilmNegativeScale,
                 Glib::ustring::compose(
                     "%1, %2, %3",
-                    round(redScale->getValue()), round(greenScale->getValue()), round(blueScale->getValue())
+                    round(redScaleRatio->getValue()), round(greenScale->getValue()), round(blueScaleRatio->getValue())
                 )
             );
 
